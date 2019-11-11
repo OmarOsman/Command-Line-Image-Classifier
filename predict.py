@@ -6,7 +6,7 @@ from utility import *
 def run(image_path,checkpoint,top_k,cat_to_name,device):   
     model = load_checkpoint(checkpoint)
     tensor = process_image(image_path,device)
-    probs, class_names = predict(image_path, model,top_k,device)
+    probs, class_names = predict(image_path, model, top_k,cat_to_name,device)
     console_display(image_path,probs,class_names,cat_to_name,device)
     
     
@@ -17,7 +17,7 @@ def console_display(image_path,probs,class_names ,cat_to_name,device):
     print(class_names)
         
     
-def predict(image_path, model, top_k,device):
+def predict(image_path, model, top_k,cat_to_name,device):
     ''' Predict the class (or classes) of an image using a trained deep learning model.
     '''
     tensor = process_image(image_path,device)  
@@ -26,10 +26,11 @@ def predict(image_path, model, top_k,device):
         output = model(tensor)
         probs, classes = F.softmax(output,dim = 1).topk(top_k)
         
-    probs,classes = np.array(probs[0]).ravel(), np.array(classes[0].add(1)).ravel()   
-    classes_names = np.array([cat_to_name[str(x)] for x in classes])
+    probs,classes = np.array(probs[0]).ravel(), np.array(classes[0].add(1)).ravel()  
+    if len(cat_to_name) > 0 :
+        classes = np.array([cat_to_name[str(x)] for x in classes])
     
-    return probs,classes_names
+    return probs,classes
 
 def set_device(enable_gpu = False) :
     if enable_gpu and torch.cuda.is_available() :

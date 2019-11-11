@@ -18,7 +18,7 @@ def run(arch,learning_rate,hidden_units,num_epochs,save_dir,device):
     model = train(model ,optimizer ,criterion,lr_scheduler,num_epochs,data_loaders,data_size,device)
     model.class_to_idx = image_datasets['train'].class_to_idx
     test(model,criterion,data_loaders,data_size,device)
-    save_checkpoint(save_dir ,model)
+    save_checkpoint(save_dir ,model arch,learning_rate,hidden_units,epochs,num_classes)
     
     
     
@@ -38,7 +38,6 @@ def train(model ,optimizer ,criterion,lr_scheduler,num_epochs,data_loaders,data_
     best_model = copy.deepcopy(model.state_dict())
     best_acc = 0.0
 
-    #for epoch in tnrange(num_epochs ,desc="Epoch") :
     for epoch in tqdm(range(num_epochs) ,desc = "Epochs") :   
         print(f'Epoch {epoch}/{num_epochs-1}')
         print('-' * 20)
@@ -147,20 +146,41 @@ def load_data_size(image_datasets) :
     
 def prepare_pretrained(arch , hidden_units,num_classes):
     if hasattr(models, arch) :
-        model = getattr(models,arch)(pretrained = True)
+        if 'vgg' in arch :
+            model = getattr(models,arch)(pretrained = True)
+            num_ftrs = model.classifier[0].in_features
+
+        elif 'densenet' in arch :
+            model = getattr(models,arch)(pretrained = True)
+            num_ftrs = model.classifier.in_features
+
+        elif 'resnet' in arch :
+            model = getattr(models,arch)(pretrained = True)
+            num_ftrs = model.fc.in_features   
+
+        elif 'alexnet' in arch :
+            model = getattr(models,arch)(pretrained = True)
+            num_ftrs = model.classifier[6].in_features   
+        else :
+            model = models.vgg_19_bn(pretrained = True)
+            num_ftrs = model.classifier[0].in_features
+        
     else :
         model = models.vgg_19_bn(pretrained = True)
+        num_ftrs = model.classifier[0].in_features
         
         
     for param in model.features.parameters():
         param.requires_grad = False
     
-    num_ftrs  = list(model.classifier.children())[0].in_features
+    
     classifier = nn.Sequential(OrderedDict([
                           ('fc1', nn.Linear(num_ftrs, hidden_units,bias = True)),
                           ('relu1', nn.ReLU()),
+                          ('drop_1',nn.Dropout(0.5)),
                           ('fc2', nn.Linear(hidden_units, hidden_units ,bias = True)),
                           ('relu2', nn.ReLU()),
+                          ('drop_2',nn.Dropout(0.5)),
                           ('fc3', nn.Linear(hidden_units, num_classes ,bias = True))
                           ]))
     
@@ -170,16 +190,19 @@ def prepare_pretrained(arch , hidden_units,num_classes):
         
         
     
-def save_checkpoint(file_name ,model):      
+def save_checkpoint(file_name ,model,arch,learning_rate,hidden_units,epochs,num_classes):      
     torch.save({
                 'model': model.cpu(),
-                'features': model.features,
                 'classifier': model.classifier,
-                'state_dict': model.state_dict()}
+                'state_dict': model.state_dict(),
+                'output_size': num_classes,
+                'hidden_units': hidden_units,
+                'learning_rate': lr,
+                'arch': arch,
+                'epochs' :epochs
+                'output_size' : num_classes}
                 ,file_name)
-    
-    
-  
+
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
@@ -214,7 +237,7 @@ if __name__ == "__main__":
         hidden_units = args['hidden_units'] 
     
         
-    epochs = 8
+    epochs = 3
     if args['epochs'] is not None:
         epochs = args['epochs']  
 

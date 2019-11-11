@@ -25,25 +25,28 @@ from PIL import Image
 
 def process_image(image_path,device):
     ''' Scales, crops, and normalizes a PIL image for a PyTorch model,
-        returns an torch tensor
+        returns a torch tensor
     '''
-    resize_size = 256, 256
-    crop_width,crop_hight = 224,224
+
     mean,std = [0.485, 0.456, 0.406] ,[0.229, 0.224, 0.225]
-    
     # TODO: Process a PIL image for use in a PyTorch model
     im = Image.open(image_path)
     
-    # resize
-    im.thumbnail(resize_size, Image.ANTIALIAS)
+    # Suggestons from the reviewer , hanlding the aspect ratio  
+    aspect_ratio = im.size[0]/im.size[1]
+    if aspect_ratio > 0:
+        im.thumbnail((999999, 256))
+    else:
+        im.thumbnail((256, 999999))
     
-    # Crop the center of the image
+    # Suggestons from the reviewer  ,Crop the center of the image
     width, height = im.size   # Get dimensions
-    left = (width - crop_width)/2
-    top = (height - crop_hight)/2
-    right = (width + crop_width)/2
-    bottom = (height + crop_hight)/2
-    im = im.crop((left, top, right, bottom))
+    left   = (width -224)/ 2
+    bottom = (height - 224)/2
+    
+    right = left + 224
+    top   = bottom + 224
+    im = im.crop((left, bottom, right,top))
     
     # Convert to 0 1 range
     np_image = np.array(im).astype(np.float32)
@@ -56,7 +59,6 @@ def process_image(image_path,device):
     np_image = np_image.transpose(2,0,1)
     tensor = torch.tensor(np_image, device=device).float()
     return tensor
-
 
 
 def imshow(image, ax=None, title=None):
